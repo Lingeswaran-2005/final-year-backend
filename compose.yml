@@ -1,0 +1,65 @@
+services:
+  myapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - target
+      - ollama
+      - postgres
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AGENT_DB_URI=${AGENT_DB_URI}
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    ports:
+      - "8000:8000"
+    networks:
+      - agent-network
+    
+  ollama:
+    image: ollama/ollama:latest
+
+    container_name: ollama
+
+    ports:
+      - "11434:11434"
+
+    volumes:
+      - ollama-data:/root/.ollama
+
+    networks:
+      - agent-network 
+  
+  target:
+    image: ubuntu:24.04
+    container_name: target
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      - agent-network
+    command: ["sleep", "infinity"]
+  
+  postgres:
+    image: postgres:17
+    container_name: agent-db
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: agent_db
+    volumes:
+      - agent-postgres-data:/var/lib/postgresql/data
+    networks:
+      - agent-network
+
+
+
+networks:
+  agent-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
+  agent-postgres-data:
