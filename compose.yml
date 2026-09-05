@@ -33,14 +33,15 @@ services:
       - agent-network 
   
   target:
-    image: ubuntu:24.04
+    build:
+      context: ./targetContainer
     container_name: target
     cap_add:
       - NET_ADMIN
       - NET_RAW
     networks:
       - agent-network
-    command: ["sleep", "infinity"]
+   
   
   postgres:
     image: postgres:17

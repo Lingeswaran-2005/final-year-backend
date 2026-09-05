@@ -3,53 +3,49 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 import os
+import logging
 
-from langchain_core.messages import HumanMessage
+
 from langgraph.checkpoint.postgres import PostgresSaver
+from src.core.exception_handlers import register_exception_handlers
 
-from src.utils.helper_functions import extract_text
-from src.graph import graph
-from src.dto import ChatResponse , ChatRequest
 
-graph_app = None
+from src.agent.graph import graph
+from src.router.chat_router import router as chat_router
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
-async def lifespan(api :FastAPI) :
+async def lifespan(app: FastAPI):
     load_dotenv()
-    
-    global graph_app
-    
-    AGENT_DB_URI = os.getenv('AGENT_DB_URI')
-    
-    with PostgresSaver.from_conn_string(AGENT_DB_URI) as checkpointer:
-        checkpointer.setup()
-    
-        graph_app = graph.compile(checkpointer= checkpointer)
-    
+
+    db_uri = os.getenv("AGENT_DB_URI")
+
+    if db_uri:
+        logger.info("Initializing graph with Postgres checkpointer")
+
+        with PostgresSaver.from_conn_string(db_uri) as checkpointer:
+            checkpointer.setup()
+            app.state.graph = graph.compile(
+                checkpointer=checkpointer
+            )
+
+            yield
+
+    else:
+        logger.warning(
+            "AGENT_DB_URI not found. "
+            "Initializing graph without checkpointer."
+        )
+
+        app.state.graph = graph.compile()
+
         yield
 
-api = FastAPI(lifespan= lifespan)
+api = FastAPI(lifespan=lifespan)
     
+api.include_router(chat_router)
 
-@api.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
-    config = {
-        "configurable":{
-            "thread_id":"user_1"
-        }
-    }
-    result = graph_app.invoke({
-        "messages": [
-            HumanMessage(content=request.message)
-        ]
-    },
-        config=config
-    )
-
-    response = result["messages"][-1]
-    content = extract_text(response.content)
-
-    return ChatResponse(
-        response=content
-    )
-    
+register_exception_handlers(app=api)
