@@ -6,12 +6,13 @@ import os
 import logging
 
 
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from src.core.exception_handlers import register_exception_handlers
 
 
 from src.agent.graph import graph
 from src.router.chat_router import router as chat_router
+from src.router.cred_router import router as cred_router
 from src.db.database import init_db , engine
 
 logging.basicConfig(level=logging.INFO)
@@ -29,8 +30,8 @@ async def lifespan(app: FastAPI):
     if db_uri:
         logger.info("Initializing graph with Postgres checkpointer")
 
-        with PostgresSaver.from_conn_string(db_uri) as checkpointer:
-            checkpointer.setup()
+        async with AsyncPostgresSaver.from_conn_string(db_uri) as checkpointer:
+            await checkpointer.setup()
             app.state.graph = graph.compile(
                 checkpointer=checkpointer
             )
@@ -52,5 +53,6 @@ async def lifespan(app: FastAPI):
 api = FastAPI(lifespan=lifespan)
     
 api.include_router(chat_router)
+api.include_router(cred_router)
 
 register_exception_handlers(app=api)
