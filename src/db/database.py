@@ -38,3 +38,6 @@ async def get_db():
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+def get_session():
+    return SessionLocal()

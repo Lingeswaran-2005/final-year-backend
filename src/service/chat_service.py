@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from langgraph.graph import StateGraph
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,7 +81,7 @@ async def get_messages(
 
 async def chat(
     db: AsyncSession,
-    graph,
+    graph : StateGraph,
     conversation_id: int,
     request: ChatRequest,
 ) -> ChatResponse:
@@ -115,7 +116,7 @@ async def chat(
         }
     }
 
-    result = graph.invoke(
+    result = await graph.ainvoke(
         {
             "messages": [
                 HumanMessage(content=request.message)

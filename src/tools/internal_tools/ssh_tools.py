@@ -4,29 +4,31 @@ import socket
 import paramiko
 
 from langchain.tools import tool
+from src.service.cred_service import get_credential_by_name
 
 
 _sessions: dict[str, paramiko.SSHClient] = {}
 
 
 @tool
-def connect(
-    host: str,
-    username: str,
-    password: str,
-    port: int = 22,
+async def connect(
+    credential_name: str
 ) -> str:
     """Connect to a remote server using SSH and return the session ID."""
 
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        credential = await get_credential_by_name(
+            credential_name
+        )
 
         client.connect(
-            hostname=host,
-            port=port,
-            username=username,
-            password=password,
+            hostname=credential.host,
+            port=credential.port,
+            username=credential.username,
+            password=credential.password,
             timeout=10,
         )
 
