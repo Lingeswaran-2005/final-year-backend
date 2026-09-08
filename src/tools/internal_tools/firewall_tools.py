@@ -14,7 +14,7 @@ def run_iptables(
         result = execute(command, session_id)
 
         if not isinstance(result, dict):
-            return f"iptables error: Invalid response format from execution handler."
+            return "iptables error: Invalid response format from execution handler."
 
         if result.get("error"):
             return f"iptables error: {result['error']}"
@@ -26,10 +26,15 @@ def run_iptables(
         if exit_code != 0:
             return f"iptables error: {stderr if stderr else 'Unknown execution error'}"
 
-        return stdout
+        return stdout or "iptables command executed successfully."
+
     except Exception as e:
         return f"iptables execution error: {str(e)}"
 
+
+# ---------------------------------------------------------
+# STATUS
+# ---------------------------------------------------------
 
 @tool
 def firewall_status(
@@ -37,20 +42,21 @@ def firewall_status(
 ) -> str:
     """Show the current iptables INPUT firewall rules."""
 
-    try:
-        return run_iptables(
-            [
-                "-L",
-                "INPUT",
-                "-n",
-                "-v",
-                "--line-numbers",
-            ],
-            session_id,
-        )
-    except Exception as e:
-        return f"Error retrieving firewall status: {str(e)}"
+    return run_iptables(
+        [
+            "-L",
+            "INPUT",
+            "-n",
+            "-v",
+            "--line-numbers",
+        ],
+        session_id,
+    )
 
+
+# ---------------------------------------------------------
+# PORT RULES
+# ---------------------------------------------------------
 
 @tool
 def firewall_allow_port(
@@ -58,30 +64,27 @@ def firewall_allow_port(
     protocol: str = "tcp",
     session_id: str | None = None,
 ) -> str:
-    """Allow incoming traffic on a port using iptables."""
+    """Allow incoming traffic on a TCP or UDP port."""
 
-    try:
-        if not 1 <= port <= 65535:
-            return "Invalid port. Port must be between 1 and 65535."
+    if not 1 <= port <= 65535:
+        return "Invalid port. Port must be between 1 and 65535."
 
-        if protocol not in {"tcp", "udp"}:
-            return "Invalid protocol. Use 'tcp' or 'udp'."
+    if protocol not in {"tcp", "udp"}:
+        return "Invalid protocol. Use 'tcp' or 'udp'."
 
-        return run_iptables(
-            [
-                "-I",
-                "INPUT",
-                "-p",
-                protocol,
-                "--dport",
-                str(port),
-                "-j",
-                "ACCEPT",
-            ],
-            session_id,
-        )
-    except Exception as e:
-        return f"Error allowing firewall port {port}: {str(e)}"
+    return run_iptables(
+        [
+            "-I",
+            "INPUT",
+            "-p",
+            protocol,
+            "--dport",
+            str(port),
+            "-j",
+            "ACCEPT",
+        ],
+        session_id,
+    )
 
 
 @tool
@@ -90,75 +93,137 @@ def firewall_deny_port(
     protocol: str = "tcp",
     session_id: str | None = None,
 ) -> str:
-    """Drop incoming traffic on a port using iptables."""
+    """Block incoming traffic on a TCP or UDP port."""
 
-    try:
-        if not 1 <= port <= 65535:
-            return "Invalid port. Port must be between 1 and 65535."
+    if not 1 <= port <= 65535:
+        return "Invalid port. Port must be between 1 and 65535."
 
-        if protocol not in {"tcp", "udp"}:
-            return "Invalid protocol. Use 'tcp' or 'udp'."
+    if protocol not in {"tcp", "udp"}:
+        return "Invalid protocol. Use 'tcp' or 'udp'."
 
-        return run_iptables(
-            [
-                "-A",
-                "INPUT",
-                "-p",
-                protocol,
-                "--dport",
-                str(port),
-                "-j",
-                "DROP",
-            ],
-            session_id,
-        )
-    except Exception as e:
-        return f"Error denying firewall port {port}: {str(e)}"
+    return run_iptables(
+        [
+            "-I",
+            "INPUT",
+            "-p",
+            protocol,
+            "--dport",
+            str(port),
+            "-j",
+            "DROP",
+        ],
+        session_id,
+    )
 
+
+# ---------------------------------------------------------
+# DELETE RULE
+# ---------------------------------------------------------
 
 @tool
-def block_icmp(
+def firewall_delete_rule(
+    rule_number: int,
+    session_id: str | None = None,
+) -> str:
+    """Delete an INPUT firewall rule using its rule number."""
+
+    if rule_number < 1:
+        return "Invalid rule number. Rule number must be greater than 0."
+
+    return run_iptables(
+        [
+            "-D",
+            "INPUT",
+            str(rule_number),
+        ],
+        session_id,
+    )
+
+
+# ---------------------------------------------------------
+# ICMP
+# ---------------------------------------------------------
+
+@tool
+def firewall_block_icmp(
     session_id: str | None = None,
 ) -> str:
     """Block incoming ICMP echo requests, preventing other machines from pinging this server."""
 
-    try:
-        return run_iptables(
-            [
-                "-A",
-                "INPUT",
-                "-p",
-                "icmp",
-                "--icmp-type",
-                "echo-request",
-                "-j",
-                "DROP",
-            ],
-            session_id,
-        )
-    except Exception as e:
-        return f"Error blocking ICMP: {str(e)}"
+    return run_iptables(
+        [
+            "-I",
+            "INPUT",
+            "-p",
+            "icmp",
+            "--icmp-type",
+            "echo-request",
+            "-j",
+            "DROP",
+        ],
+        session_id,
+    )
 
 
 @tool
-def allow_icmp(
+def firewall_allow_icmp(
     session_id: str | None = None,
 ) -> str:
-    """Remove the ICMP blocking rule so incoming ping requests are allowed."""
+    """Remove the first matching ICMP echo-request blocking rule."""
 
-    try:
-        return run_iptables(
-            [
-                "-D",
-                "INPUT",
-                "-p",
-                "icmp",
-                "--icmp-type",
-                "echo-request",
-                "-j",
-                "DROP",
-            ],
-            session_id,
-        )
-    except Exception as e:
-        return f"Error allowing ICMP: {str(e)}"
+    return run_iptables(
+        [
+            "-D",
+            "INPUT",
+            "-p",
+            "icmp",
+            "--icmp-type",
+            "echo-request",
+            "-j",
+            "DROP",
+        ],
+        session_id,
+    )
+
+
+# ---------------------------------------------------------
+# FLUSH
+# ---------------------------------------------------------
+
+@tool
+def firewall_flush(
+    session_id: str | None = None,
+) -> str:
+    """Remove all rules from the INPUT chain."""
+
+    return run_iptables(
+        [
+            "-F",
+            "INPUT",
+        ],
+        session_id,
+    )
+
+
+# ---------------------------------------------------------
+# DEFAULT POLICY
+# ---------------------------------------------------------
+
+@tool
+def firewall_set_default_policy(
+    policy: str,
+    session_id: str | None = None,
+) -> str:
+    """Set the default INPUT policy to ACCEPT or DROP."""
+
+    if policy not in {"ACCEPT", "DROP"}:
+        return "Invalid policy. Use 'ACCEPT' or 'DROP'."
+
+    return run_iptables(
+        [
+            "-P",
+            "INPUT",
+            policy,
+        ],
+        session_id,
+    )

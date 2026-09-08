@@ -10,7 +10,8 @@ RUN apt-get update && \
         dnsutils \
         iputils-ping \
         iproute2 \
-        net-tools && \
+        net-tools \
+        python3 && \
     rm -rf /var/lib/apt/lists/*
 
 # Create admin user
