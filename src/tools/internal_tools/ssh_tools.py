@@ -40,7 +40,7 @@ async def connect(
     except paramiko.SSHException as e:
         return f"SSH Connection Error: {str(e)}"
     except socket.error as e:
-        return f"SSH Connection Error: Unable to reach host '{host}:{port}' ({str(e)})."
+        return f"SSH Connection Error: Unable to reach host '{credential.host}:{credential.port}' ({str(e)})."
     except Exception as e:
         return f"SSH Connection Error: {str(e)}"
 
