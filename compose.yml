@@ -58,7 +58,7 @@ services:
       - agent-network
   
   app-db:
-    image: postgres:17
+    image: pgvector/pgvector:pg16
     container_name: app-db
     environment:
       POSTGRES_USER: app
