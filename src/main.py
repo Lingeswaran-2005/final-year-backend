@@ -13,6 +13,7 @@ from src.core.exception_handlers import register_exception_handlers
 from src.agent.graph import graph
 from src.router.chat_router import router as chat_router
 from src.router.cred_router import router as cred_router
+from src.router.document_router import router as document_router
 from src.db.database import init_db , engine
 
 logging.basicConfig(level=logging.INFO)
@@ -54,5 +55,6 @@ api = FastAPI(lifespan=lifespan)
     
 api.include_router(chat_router)
 api.include_router(cred_router)
+api.include_router(document_router)
 
 register_exception_handlers(app=api)
