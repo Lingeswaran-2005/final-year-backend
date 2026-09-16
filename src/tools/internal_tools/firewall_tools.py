@@ -53,6 +53,9 @@ def firewall_status(
         session_id,
     )
 
+firewall_status.metadata = {
+    "readOnlyHint": True,
+}
 
 # ---------------------------------------------------------
 # PORT RULES
@@ -86,6 +89,10 @@ def firewall_allow_port(
         session_id,
     )
 
+firewall_allow_port.metadata = {
+    "readOnlyHint": False,
+    "destructiveHint": False,
+}
 
 @tool
 def firewall_deny_port(
@@ -115,6 +122,10 @@ def firewall_deny_port(
         session_id,
     )
 
+firewall_deny_port.metadata = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+}
 
 # ---------------------------------------------------------
 # DELETE RULE
@@ -139,6 +150,10 @@ def firewall_delete_rule(
         session_id,
     )
 
+firewall_delete_rule.metadata = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+}
 
 # ---------------------------------------------------------
 # ICMP
@@ -164,6 +179,10 @@ def firewall_block_icmp(
         session_id,
     )
 
+firewall_block_icmp.metadata = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+}
 
 @tool
 def firewall_allow_icmp(
@@ -185,6 +204,10 @@ def firewall_allow_icmp(
         session_id,
     )
 
+firewall_allow_icmp.metadata = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+}
 
 # ---------------------------------------------------------
 # FLUSH
@@ -204,6 +227,10 @@ def firewall_flush(
         session_id,
     )
 
+firewall_flush.metadata = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+}
 
 # ---------------------------------------------------------
 # DEFAULT POLICY
@@ -227,3 +254,8 @@ def firewall_set_default_policy(
         ],
         session_id,
     )
+
+firewall_set_default_policy.metadata = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+}

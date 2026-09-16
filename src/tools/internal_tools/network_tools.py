@@ -27,6 +27,9 @@ def ping(
             "error": str(e),
         }
 
+ping.metadata = {
+    "readOnlyHint": True,
+}
 
 @tool
 def dig(
@@ -52,6 +55,9 @@ def dig(
             "error": str(e),
         }
 
+dig.metadata = {
+    "readOnlyHint": True,
+}
 
 @tool
 def curl(
@@ -77,6 +83,9 @@ def curl(
             "error": str(e),
         }
 
+curl.metadata = {
+    "readOnlyHint": True,
+}
 
 @tool
 def traceroute(
@@ -100,4 +109,8 @@ def traceroute(
             "stderr": f"Traceroute execution error: {str(e)}",
             "exit_code": -1,
             "error": str(e),
-        }
+        }
+
+traceroute.metadata = {
+    "readOnlyHint": True,
+}
