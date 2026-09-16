@@ -1,5 +1,5 @@
 from typing import Annotated, TypedDict
-from langchain_core.messages import BaseMessage, SystemMessage, AIMessage
+from langchain_core.messages import BaseMessage, SystemMessage, AIMessage , ToolMessage
 from langgraph.graph.message import add_messages
 from langchain_ollama import ChatOllama
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -22,6 +22,7 @@ Rules:
 
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
+    approval_granted: bool
 
 
 '''llm = ChatOllama(
@@ -45,10 +46,30 @@ def should_continue(state: AgentState) -> str:
             return END
         last_message = messages[-1]
         if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
-            return "tools"
+            return "approval"
         return END
     except Exception:
         return END
+    
+def route_after_approval(state: AgentState) -> str:
+    if state.get("approval_granted") is True:
+        return "tools"
+
+    return "approval_denied"
+
+
+def approval_denied(state: AgentState):
+
+    tool_call = state["messages"][-1].tool_calls[0]
+
+    return {
+        "messages": [
+            ToolMessage(
+                content="The user denied permission to execute this tool.",
+                tool_call_id=tool_call["id"],
+            )
+        ]
+    }
 
 def agent(state: AgentState) -> AgentState:
     try:

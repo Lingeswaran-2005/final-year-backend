@@ -142,3 +142,15 @@ def _execute_remote(
             "exit_code": -1,
             "error": str(e),
         }
+
+## meta data for shh connection and disconnection
+
+connect.metadata = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+}
+
+disconnect.metadata = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+}

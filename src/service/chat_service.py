@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
-from langgraph.graph import StateGraph
+from langgraph.graph import StateGraph 
+from langgraph.types import Command
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,8 +79,145 @@ async def get_messages(
     )
 
     return list(result.scalars().all())
+        
+## moduled format
 
+def validate_chat_request(request: ChatRequest) -> None:
+    if not request.message or not request.message.strip():
+        raise AppException(
+            message="Message cannot be empty.",
+            status_code=400,
+        )
+        
+async def save_user_message(
+    db: AsyncSession,
+    conversation_id: int,
+    content: str,
+) -> None:
 
+    message = Message(
+        conversation_id=conversation_id,
+        role="user",
+        content=content,
+    )
+
+    db.add(message)
+    await db.commit()
+
+async def build_chat_prompt(
+    db: AsyncSession,
+    user_message: str,
+) -> str:
+
+    chunks = await search_similar_chunks(
+        db=db,
+        query=user_message,
+        limit=3,
+    )
+
+    rag_context = build_rag_context(chunks)
+
+    return build_augmented_prompt(
+        user_question=user_message,
+        context=rag_context,
+    )
+
+def get_graph_config(conversation_id: int) -> dict:
+    return {
+        "configurable": {
+            "thread_id": str(conversation_id),
+        }
+    }
+
+async def invoke_chat_graph(
+    graph,
+    conversation_id: int,
+    prompt: str,
+):
+
+    config = get_graph_config(conversation_id)
+
+    return await graph.ainvoke(
+        {
+            "messages": [
+                HumanMessage(content=prompt)
+            ]
+        },
+        config=config,
+    )
+
+async def resume_chat_graph(
+    graph,
+    conversation_id: int,
+    approved: bool,
+):
+    config = get_graph_config(conversation_id)
+
+    return await graph.ainvoke(
+        Command(
+            resume={
+                "approved": approved
+            }
+        ),
+        config=config,
+    )
+    
+def get_interrupt(result):
+
+    interrupts = result.get("__interrupt__", [])
+
+    if not interrupts:
+        return None
+
+    return interrupts[0].value
+    
+def extract_graph_response(result) -> str:
+
+    messages = result.get("messages", [])
+
+    if not messages:
+        raise AppException(
+            message="No response messages returned from graph invocation.",
+            status_code=500,
+        )
+
+    response_message = messages[-1]
+
+    response_content = extract_text(
+        response_message.content
+    ).strip()
+
+    if not response_content:
+        raise AppException(
+            message="The AI service returned an empty response.",
+            status_code=500,
+        )
+
+    return response_content
+
+async def save_assistant_message(
+    db: AsyncSession,
+    conversation_id: int,
+    content: str,
+) -> None:
+
+    assistant_message = Message(
+        conversation_id=conversation_id,
+        role="assistant",
+        content=content,
+    )
+
+    db.add(assistant_message)
+
+    conversation = await get_conversation(
+        db=db,
+        conversation_id=conversation_id,
+    )
+
+    conversation.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    
 async def chat(
     db: AsyncSession,
     graph,
@@ -93,108 +231,79 @@ async def chat(
             status_code=503,
         )
 
-    if not request.message or not request.message.strip():
-        raise AppException(
-            message="Message cannot be empty.",
-            status_code=400,
-        )
-
-    # Make sure the conversation exists
-    conversation = await get_conversation(
-        db=db,
-        conversation_id=conversation_id,
-    )
-
-    # Save the original user message.
-    # The augmented prompt is not stored in the application chat history.
-    user_message = Message(
-        conversation_id=conversation_id,
-        role="user",
-        content=request.message,
-    )
-
-    db.add(user_message)
-    await db.commit()
-
     try:
-        # Retrieve the top three relevant document chunks.
-        chunks = await search_similar_chunks(
+
+        # --------------------------------
+        # Resume an interrupted graph
+        # --------------------------------
+
+        if request.approved is not None:
+
+            result = await resume_chat_graph(
+                graph=graph,
+                conversation_id=conversation_id,
+                approved=request.approved,
+            )
+
+        # --------------------------------
+        # Start a new chat
+        # --------------------------------
+
+        else:
+
+            validate_chat_request(request)
+
+            await get_conversation(
+                db=db,
+                conversation_id=conversation_id,
+            )
+
+            await save_user_message(
+                db=db,
+                conversation_id=conversation_id,
+                content=request.message,
+            )
+
+            prompt = await build_chat_prompt(
+                db=db,
+                user_message=request.message,
+            )
+
+            result = await invoke_chat_graph(
+                graph=graph,
+                conversation_id=conversation_id,
+                prompt=prompt,
+            )
+
+        # --------------------------------
+        # Check whether graph is paused
+        # --------------------------------
+
+        interrupt = get_interrupt(result)
+
+        if interrupt is not None:
+            return ChatResponse(
+                response=None,
+                approval_required=True,
+                approval_request=interrupt,
+            )
+
+        # --------------------------------
+        # Normal AI response
+        # --------------------------------
+
+        response_content = extract_graph_response(result)
+
+        await save_assistant_message(
             db=db,
-            query=request.message,
-            limit=3,
-        )
-
-        # Build context from the retrieved chunks.
-        rag_context = build_rag_context(chunks)
-
-        # Add the context to the user's question.
-        augmented_prompt = build_augmented_prompt(
-            user_question=request.message,
-            context=rag_context,
-        )
-
-        # Use the existing graph and its existing SYSTEM_PROMPT.
-        config = {
-            "configurable": {
-                "thread_id": str(conversation_id),
-            }
-        }
-
-        result = await graph.ainvoke(
-            {
-                "messages": [
-                    HumanMessage(content=augmented_prompt)
-                ]
-            },
-            config=config,
-        )
-
-        messages = result.get("messages", [])
-
-        if not messages:
-            raise AppException(
-                message="No response messages returned from graph invocation.",
-                status_code=500,
-            )
-
-        response_message = messages[-1]
-
-        response_content = response_message.content
-
-        if isinstance(response_content, list):
-            response_content = "\n".join(
-                item.get("text", "")
-                for item in response_content
-                if isinstance(item, dict)
-                and item.get("type") == "text"
-            )
-
-        if not isinstance(response_content, str):
-            response_content = str(response_content)
-
-        response_content = response_content.strip()
-
-        if not response_content:
-            raise AppException(
-                message="The AI service returned an empty response.",
-                status_code=500,
-            )
-
-        # Save only the normal assistant answer.
-        assistant_message = Message(
             conversation_id=conversation_id,
-            role="assistant",
             content=response_content,
         )
 
-        db.add(assistant_message)
-
-        conversation.updated_at = datetime.now(timezone.utc)
-
-        await db.commit()
-
         return ChatResponse(
             response=response_content,
+            approval_required=False,
+            approval_request=None,
         )
 
     except AppException:
