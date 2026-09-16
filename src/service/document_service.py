@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import AppException
 from src.db.model import Document
+from src.service.document_processing_service import process_document
 
 
 UPLOAD_DIRECTORY = Path("/app/storage/documents")
@@ -75,6 +76,12 @@ async def upload_document(
     db.add(document)
 
     try:
+        await db.flush()
+
+        await process_document(
+            db=db,
+            document=document,
+        )
 
         await db.commit()
         await db.refresh(document)
