@@ -9,6 +9,7 @@ async def search_similar_chunks(
     db: AsyncSession,
     query: str,
     limit: int = 3,
+    similarity_threshold: float = 0.75,
 ) -> list[DocumentChunk]:
 
     query_embedding = generate_embedding(query)
@@ -16,10 +17,13 @@ async def search_similar_chunks(
     distance = DocumentChunk.embedding.cosine_distance(
         query_embedding
     )
+    
+    similarity = 1 - distance
 
     result = await db.execute(
         select(DocumentChunk)
-        .order_by(distance)
+        .where(similarity >= similarity_threshold)
+        .order_by(distance.asc())
         .limit(limit)
     )
 
@@ -44,7 +48,7 @@ def build_rag_context(
             {chunk.content}
             """.strip()
         )
-
+        
     return "\n\n".join(context_parts)
 
 def build_augmented_prompt(
@@ -53,20 +57,23 @@ def build_augmented_prompt(
 ) -> str:
 
     return f"""
-Use the following document context to answer the user's question.
+Use the following document context as additional information that may help answer the user's question.
 
 Document context:
------------------
+
 {context}
------------------
 
 User question:
 {user_question}
 
 Instructions:
-- Use the document context when it is relevant.
-- Do not mention embeddings, vector search, chunks, or retrieval.
-- If the context does not contain the answer, say that the information
-  is not available in the provided documents.
-- Do not invent facts.
+
+* Use the document context when it is relevant to the user's question.
+* Treat the document context as supplementary information, not as the only source of truth.
+* You may use your existing knowledge when the document context does not contain the required information.
+* When the user asks you to perform an action or obtain current information, use the appropriate available tools rather than relying only on the document context.
+* Prefer tool results over document context when determining the current state of a system.
+* Do not mention embeddings, vector search, chunks, or retrieval.
+* Do not invent facts or claim that an action was performed unless you actually performed it.
+
 """.strip()
