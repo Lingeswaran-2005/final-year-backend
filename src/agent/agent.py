@@ -70,6 +70,12 @@ def approval_denied(state: AgentState):
             )
         ]
     }
+    
+def reset_approval(state: AgentState):
+    return {
+        "approval_granted": False
+    }    
+
 
 def agent(state: AgentState) -> AgentState:
     try:
