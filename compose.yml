@@ -17,6 +17,8 @@ services:
       - NET_RAW
     ports:
       - "8000:8000"
+    volumes:
+      - app-file-data:/app/storage/documents
     networks:
       - agent-network
     

@@ -113,6 +113,7 @@ async def build_chat_prompt(
         db=db,
         query=user_message,
         limit=3,
+        similarity_threshold=0.6
     )
 
     rag_context = build_rag_context(chunks)
