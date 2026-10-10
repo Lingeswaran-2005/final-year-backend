@@ -1,0 +1,35 @@
+options {
+    directory "/var/cache/bind";
+
+    // Listen for DNS queries on all interfaces.
+    listen-on { any; };
+    listen-on-v6 { any; };
+
+    // Enable recursive resolution for external domains.
+    recursion yes;
+
+    // Allow DNS queries only from our lab networks.
+    allow-query {
+        localhost;
+        192.168.10.0/24;
+        192.168.20.0/24;
+        172.30.0.0/24;
+    };
+
+    // Restrict recursion and cached responses to trusted lab clients.
+    allow-recursion {
+        localhost;
+        192.168.10.0/24;
+        192.168.20.0/24;
+        172.30.0.0/24;
+    };
+
+    allow-query-cache {
+        localhost;
+        192.168.10.0/24;
+        192.168.20.0/24;
+        172.30.0.0/24;
+    };
+
+    dnssec-validation auto;
+};
