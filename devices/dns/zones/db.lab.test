@@ -1,0 +1,17 @@
+$TTL 86400
+
+@   IN  SOA ns.lab.test. admin.lab.test. (
+        2
+        3600
+        1800
+        604800
+        86400
+)
+
+@           IN  NS  ns.lab.test.
+
+ns          IN  A   192.168.20.10
+target      IN  A   192.168.20.20
+appserver   IN  A   192.168.10.10
+router      IN  A   192.168.10.1
+
