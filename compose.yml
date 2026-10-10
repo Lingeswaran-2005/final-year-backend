@@ -1,9 +1,12 @@
 services:
-  myapp:
+  app-server:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: app-server
     depends_on:
+      - router
+      - dns-server
       - target
       - ollama
       - agent-db
@@ -19,34 +22,70 @@ services:
       - "8000:8000"
     volumes:
       - app-file-data:/app/storage/documents
+    dns:
+      - 192.168.20.10
     networks:
-      - agent-network
-    
+      agent-network:
+      lab-a:
+        ipv4_address: 192.168.10.10
+      management:
+        ipv4_address: 172.30.0.10
+
   ollama:
     image: ollama/ollama:latest
-
     container_name: ollama
-
     ports:
       - "11434:11434"
-
     volumes:
       - ollama-data:/root/.ollama
-
     networks:
-      - agent-network 
-  
-  target:
+      - agent-network
+
+  router:
     build:
-      context: ./targetContainer
-    container_name: target
+      context: ./devices/router
+    container_name: router
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    networks:
+      lab-a:
+        ipv4_address: 192.168.10.2
+      lab-b:
+        ipv4_address: 192.168.20.2
+      management:
+        ipv4_address: 172.30.0.20
+
+  dns-server:
+    build:
+      context: ./devices/dns
+    container_name: dns-server
     cap_add:
       - NET_ADMIN
       - NET_RAW
     networks:
-      - agent-network
-   
-  
+      lab-b:
+        ipv4_address: 192.168.20.10
+      management:
+        ipv4_address: 172.30.0.30
+
+  target:
+    build:
+      context: ./devices/target
+    container_name: target
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    dns:
+      - 192.168.20.10
+    networks:
+      lab-b:
+        ipv4_address: 192.168.20.20
+      management:
+        ipv4_address: 172.30.0.40
+
   agent-db:
     image: postgres:17
     container_name: agent-db
@@ -58,7 +97,7 @@ services:
       - agent-postgres-data:/var/lib/postgresql/data
     networks:
       - agent-network
-  
+
   app-db:
     image: pgvector/pgvector:pg16
     container_name: app-db
@@ -71,11 +110,27 @@ services:
     networks:
       - agent-network
 
-
-
 networks:
   agent-network:
     driver: bridge
+
+  lab-a:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.10.0/24
+
+  lab-b:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.20.0/24
+
+  management:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
 
 volumes:
   ollama-data:

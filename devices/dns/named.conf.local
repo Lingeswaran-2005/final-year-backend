@@ -1,0 +1,4 @@
+zone "lab.test" {
+    type master;
+    file "/etc/bind/zones/db.lab.test";
+};
