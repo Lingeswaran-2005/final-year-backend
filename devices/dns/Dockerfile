@@ -6,6 +6,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY named.conf.local /etc/bind/named.conf.local
+COPY named.conf.options /etc/bind/named.conf.options
 COPY zones/db.lab.test /etc/bind/zones/db.lab.test
 
 COPY routes.sh /usr/local/bin/routes.sh
