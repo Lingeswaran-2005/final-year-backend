@@ -12,6 +12,5 @@ COPY zones/db.lab.test /etc/bind/zones/db.lab.test
 COPY routes.sh /usr/local/bin/routes.sh
 RUN chmod +x /usr/local/bin/routes.sh
 
-ENTRYPOINT ["/usr/local/bin/routes.sh"]
 
-CMD ["named", "-g", "-c", "/etc/bind/named.conf"]
+CMD ["/usr/local/bin/routes.sh"]
