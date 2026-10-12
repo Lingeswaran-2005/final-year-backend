@@ -23,7 +23,7 @@ services:
     volumes:
       - app-file-data:/app/storage/documents
     dns:
-      - 192.168.20.10
+      - 172.30.0.30
     networks:
       agent-network:
       lab-a:
