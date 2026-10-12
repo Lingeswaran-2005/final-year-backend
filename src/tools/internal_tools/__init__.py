@@ -17,6 +17,14 @@ from src.tools.internal_tools.router_tools import (
     router_add_default_route,
     router_delete_default_route,
 )
+from src.tools.internal_tools.dns_tools import (
+    dns_status,
+    dns_local_config,
+    dns_options,
+    dns_zone_data
+)
+
+
 SSH_TOOLS = [connect , disconnect]
 
 NETWORK_TOOLS = [ping , curl , traceroute , dig]
@@ -49,4 +57,9 @@ ROUTER_TOOLS = [
     router_delete_default_route,
 ]
 
-INTERNAL_TOOLS = SSH_TOOLS + NETWORK_TOOLS + FIREWALL_TOOLS + ROUTER_TOOLS
+DNS_TOOLS = [    dns_status,
+    dns_local_config,
+    dns_options,
+    dns_zone_data]
+
+INTERNAL_TOOLS = SSH_TOOLS + NETWORK_TOOLS + FIREWALL_TOOLS + ROUTER_TOOLS + DNS_TOOLS
