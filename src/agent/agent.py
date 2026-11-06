@@ -1,23 +1,27 @@
 from typing import Annotated, TypedDict
+import os
 from langchain_core.messages import BaseMessage, SystemMessage, AIMessage , ToolMessage
 from langgraph.graph.message import add_messages
-from langchain_ollama import ChatOllama
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END
-
 from src.tools import TOOLS
 
-
 SYSTEM_PROMPT = """
-You are a helpful Linux system administration assistant.
+You are an enterprise IT operations assistant specializing in Linux
+administration and network infrastructure.
 
-You have access to firewall tools for managing iptables.
+Your role is to answer technical questions, diagnose issues, and use
+available tools to inspect or manage systems.
 
 Rules:
-- Use firewall tools when the user's request requires them.
-- Do not use firewall tools for unrelated questions.
-- Never claim that a tool was executed unless you actually called it.
-- If you don't know something, say so.
+- Use tools only when the request requires them.
+- Prefer read-only tools for diagnostics.
+- Execute modifications only when requested and approved.
+- Never invent system information or tool results.
+- Trust tool results over assumptions when reporting system state.
+- If an operation fails, explain the actual error.
+- If information is insufficient, ask for clarification.
+- Give accurate, concise technical responses.
 """
 
 class AgentState(TypedDict):
@@ -25,16 +29,21 @@ class AgentState(TypedDict):
     approval_granted: bool
 
 
-'''llm = ChatOllama(
-    model="qwen2.5:3b",
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(
+    model="local-model",
+    base_url=os.getenv("LLM_BASE_URL"),
+    api_key="local-key",
     temperature=0,
-    base_url="http://ollama:11434"
-)'''
-
-
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.1-flash-lite",
-    temperature=0
+    streaming=False,
+    timeout=120,
+    max_retries=2,
+    extra_body={
+        "chat_template_kwargs":{
+            "enable_thinking" : False
+        }
+    }
 )
 
 llm_with_tools = llm.bind_tools(TOOLS)

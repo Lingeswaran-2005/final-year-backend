@@ -11,7 +11,7 @@ from src.db.model import Conversation, Message
 from src.schema.chat import ChatRequest, ChatResponse
 from src.core.exceptions import AppException
 from src.utils.helper_functions import extract_text
-from src.service.rag_service import search_similar_chunks , build_rag_context , build_augmented_prompt
+from src.service.rag_functions.rag_service import search_similar_chunks , build_rag_context , build_augmented_prompt
 
 
 async def create_conversation(

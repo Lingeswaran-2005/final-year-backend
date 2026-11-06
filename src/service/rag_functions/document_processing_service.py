@@ -2,12 +2,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.model import Document
 
-from src.service.chunking_service import create_chunks
-from src.service.document_chunk_service import (
+from src.service.rag_functions.chunking_service import create_chunks
+from src.service.rag_functions.document_chunk_service import (
     create_document_chunks,
 )
-from src.service.embedding_service import generate_embeddings
-from src.service.text_extraction_service import extract_text
+from src.service.rag_functions.embedding_service import generate_embeddings
+from src.service.rag_functions.text_extraction_service import extract_text
 
 
 async def process_document(

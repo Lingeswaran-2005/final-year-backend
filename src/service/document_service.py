@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import AppException
 from src.db.model import Document
-from src.service.document_processing_service import process_document
+from src.service.rag_functions.document_processing_service import process_document
 
 
 UPLOAD_DIRECTORY = Path("/app/storage/documents")
