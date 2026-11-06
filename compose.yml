@@ -12,7 +12,7 @@ services:
       - agent-db
       - app-db
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL}
       - AGENT_DB_URI=${AGENT_DB_URI}
       - APP_DB_URI=${APP_DB_URI}
     cap_add:
